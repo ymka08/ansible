@@ -1,29 +1,41 @@
 # Домашнее задание к занятию 2 «Работа с Playbook»
 
-## Подготовка к выполнению
+5-8
 
-1. * Необязательно. Изучите, что такое [ClickHouse](https://www.youtube.com/watch?v=fjTNS2zkeBs) и [Vector](https://www.youtube.com/watch?v=CgEhyffisLY).
-2. Создайте свой публичный репозиторий на GitHub с произвольным именем или используйте старый.
-3. Скачайте [Playbook](./playbook/) из репозитория с домашним заданием и перенесите его в свой репозиторий.
-4. Подготовьте хосты в соответствии с группами из предподготовленного playbook.
+<img width="1709" height="890" alt="image" src="https://github.com/user-attachments/assets/da849d71-e77a-45e8-8faa-9396c79276f7" />
 
-## Основная часть
 
-1. Подготовьте свой inventory-файл `prod.yml`.
-2. Допишите playbook: нужно сделать ещё один play, который устанавливает и настраивает [vector](https://vector.dev). Конфигурация vector должна деплоиться через template файл jinja2. От вас не требуется использовать все возможности шаблонизатора, просто вставьте стандартный конфиг в template файл. Информация по шаблонам по [ссылке](https://www.dmosk.ru/instruktions.php?object=ansible-nginx-install). не забудьте сделать handler на перезапуск vector в случае изменения конфигурации!
-3. При создании tasks рекомендую использовать модули: `get_url`, `template`, `unarchive`, `file`.
-4. Tasks должны: скачать дистрибутив нужной версии, выполнить распаковку в выбранную директорию, установить vector.
-5. Запустите `ansible-lint site.yml` и исправьте ошибки, если они есть.
-6. Попробуйте запустить playbook на этом окружении с флагом `--check`.
-7. Запустите playbook на `prod.yml` окружении с флагом `--diff`. Убедитесь, что изменения на системе произведены.
-8. Повторно запустите playbook с флагом `--diff` и убедитесь, что playbook идемпотентен.
-9. Подготовьте README.md-файл по своему playbook. В нём должно быть описано: что делает playbook, какие у него есть параметры и теги. Пример качественной документации ansible playbook по [ссылке](https://github.com/opensearch-project/ansible-playbook). Так же приложите скриншоты выполнения заданий №5-8
-10. Готовый playbook выложите в свой репозиторий, поставьте тег `08-ansible-02-playbook` на фиксирующий коммит, в ответ предоставьте ссылку на него.
+<img width="1207" height="147" alt="image" src="https://github.com/user-attachments/assets/f7c3e6be-18e2-467f-a0d4-09eeed563e31" />
 
----
 
-### Как оформить решение задания
+<img width="1698" height="871" alt="image" src="https://github.com/user-attachments/assets/4443a9d7-8cde-43be-aedd-d9da0eeb6d7c" />
+<img width="1692" height="710" alt="image" src="https://github.com/user-attachments/assets/8edd49f5-8a36-4dfd-bea8-d40cec8451c4" />
 
-Выполненное домашнее задание пришлите в виде ссылки на .md-файл в вашем репозитории.
+<img width="1685" height="822" alt="image" src="https://github.com/user-attachments/assets/2e1187c1-f5c7-4001-9daf-0b05f5f320e8" />
 
----
+
+Playbook состоит из двух play.
+
+На хостах группы clickhouse playbook:
+- скачивает DEB-пакеты ClickHouse
+- устанавливает clickhouse-common-static
+- устанавливает clickhouse-client
+- устанавливает clickhouse-server
+- запускает или перезапускает сервис clickhouse-server
+- создаёт базу данных logs.
+
+На хостах группы vector playbook:
+- скачивает DEB-пакет Vector
+- устанавливает Vector
+- создаёт каталог /etc/vector
+- разворачивает конфигурацию Vector из шаблона templates/vector.yml.j2
+- перезапускает Vector при изменении конфигурации.
+
+Версия ClickHouse 22.3.3.44
+Список пакетов ClickHouse clickhouse-client, clickhouse-server, clickhouse-common-static
+Переменные ClickHouse находятся в group_vars/clickhouse/vars.yml
+
+Production inventory находится в inventory/prod.yml
+В inventory определены две группы:
+clickhouse — сервер ClickHouse
+vector — сервер Vector
