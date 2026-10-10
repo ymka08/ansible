@@ -1,0 +1,17 @@
+---
+clickhouse:
+  hosts:
+    clickhouse-01:
+      ansible_host: 93.77.166.73
+      ansible_user: ymka
+
+vector:
+  hosts:
+    vector-01:
+      ansible_host: 153.51.117.203
+      ansible_user: ymka
+lighthouse:
+  hosts:
+    lighthouse-01:
+      ansible_host: 153.51.113.211
+      ansible_user: ymka
