@@ -1,0 +1,139 @@
+---
+- name: Install Clickhouse
+  hosts: clickhouse
+
+  handlers:
+    - name: Start clickhouse service
+      become: true
+      ansible.builtin.service:
+        name: clickhouse-server
+        state: restarted
+      when: not ansible_check_mode
+
+  tasks:
+    - name: Download Clickhouse packages
+      block:
+        - name: Get clickhouse client
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/deb/pool/main/c/clickhouse-client/clickhouse-client_{{ clickhouse_version }}_all.deb"
+            dest: "/tmp/clickhouse-client-{{ clickhouse_version }}.deb"
+            mode: "0644"
+          check_mode: false
+
+        - name: Get clickhouse server
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/deb/pool/main/c/clickhouse-server/clickhouse-server_{{ clickhouse_version }}_all.deb"
+            dest: "/tmp/clickhouse-server-{{ clickhouse_version }}.deb"
+            mode: "0644"
+          check_mode: false
+
+        - name: Get clickhouse common static
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/deb/pool/main/c/clickhouse-common-static/clickhouse-common-static_{{ clickhouse_version }}_amd64.deb"
+            dest: "/tmp/clickhouse-common-static-{{ clickhouse_version }}.deb"
+            mode: "0644"
+          check_mode: false
+
+    - name: Install clickhouse common static
+      become: true
+      ansible.builtin.apt:
+        deb: "/tmp/clickhouse-common-static-{{ clickhouse_version }}.deb"
+      when: not ansible_check_mode
+
+    - name: Install clickhouse client
+      become: true
+      ansible.builtin.apt:
+        deb: "/tmp/clickhouse-client-{{ clickhouse_version }}.deb"
+      when: not ansible_check_mode
+
+    - name: Install clickhouse server
+      become: true
+      ansible.builtin.apt:
+        deb: "/tmp/clickhouse-server-{{ clickhouse_version }}.deb"
+      when: not ansible_check_mode
+      notify: Start clickhouse service
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+
+    - name: Create database
+      ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
+      register: create_db
+      failed_when: create_db.rc != 0 and create_db.rc != 82
+      changed_when: create_db.rc == 0
+      when: not ansible_check_mode
+
+- name: Install Vector
+  hosts: vector
+  become: true
+
+  handlers:
+    - name: Restart Vector
+      ansible.builtin.service:
+        name: vector
+        state: restarted
+      when: not ansible_check_mode
+
+  tasks:
+    - name: Download Vector
+      ansible.builtin.get_url:
+        url: https://packages.timber.io/vector/0.33.0/vector_0.33.0-1_amd64.deb
+        dest: /tmp/vector.deb
+        mode: "0644"
+
+    - name: Install Vector
+      ansible.builtin.apt:
+        deb: /tmp/vector.deb
+      when: not ansible_check_mode
+
+    - name: Create Vector config directory
+      ansible.builtin.file:
+        path: /etc/vector
+        state: directory
+        mode: "0755"
+
+    - name: Configure Vector
+      ansible.builtin.template:
+        src: vector.yml.j2
+        dest: /etc/vector/vector.yml
+        mode: "0644"
+      notify: Restart Vector
+
+- name: Install Lighthouse
+  hosts: lighthouse
+  become: true
+
+  tasks:
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - git
+          - nginx
+        state: present
+        update_cache: true
+
+    - name: Clone Lighthouse
+      ansible.builtin.git:
+        repo: https://github.com/VKCOM/lighthouse.git
+        dest: /var/www/lighthouse
+        version: master
+
+    - name: Configure Nginx for Lighthouse
+      ansible.builtin.template:
+        src: lighthouse.conf.j2
+        dest: /etc/nginx/sites-available/lighthouse.conf
+        mode: "0644"
+      notify: Restart Nginx
+
+    - name: Enable Lighthouse site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/lighthouse.conf
+        dest: /etc/nginx/sites-enabled/lighthouse.conf
+        state: link
+      notify: Restart Nginx
+
+  handlers:
+    - name: Restart Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
